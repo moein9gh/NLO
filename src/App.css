@@ -36,3 +36,13 @@
     transform: rotate(360deg);
   }
 }
+
+.math-input {
+  background: white;
+  color: black;
+  padding: 0.5rem;
+  border-radius: 8px;
+  font-size: 1.2rem;
+  width: 80%;
+  max-width: 600px;
+}
