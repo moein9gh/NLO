@@ -46,3 +46,15 @@
   width: 80%;
   max-width: 600px;
 }
+
+input:focus,
+select:focus {
+  border-color: #7F8CAA;
+  box-shadow: 0 0 0 2px rgba(127, 140, 170, 0.2);
+}
+
+select:hover,
+input:hover {
+  background-color: #f0f4f8;
+  cursor: pointer;
+}

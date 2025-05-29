@@ -15,38 +15,30 @@ export function parseLatexToExpression(latex) {
         return latex;
     }
 }
+
 export function gradientDescent(expr, vars, initVals, alpha, maxIter, tol) {
     let x = [...initVals];
     const grad = vars.map(v => derivative(expr, v).toString());
 
     const trajectory = [x.slice()];
+    const explanations = [];
+
     for (let i = 0; i < maxIter; i++) {
         const scope = {};
         vars.forEach((v, idx) => { scope[v] = x[idx]; });
 
-        console.log(`\n🌀 Gradient Descent Iteration ${i}`);
-        console.log("Scope:", scope);
-
-        let gradVals;
-        try {
-            gradVals = grad.map((g, idx) => {
-                const val = evaluate(g, scope);
-                console.log(`∂f/∂${vars[idx]} = ${g} =`, val);
-                return val;
-            });
-        } catch (e) {
-            console.error("❌ Gradient evaluation failed:", e.message);
-            break;
-        }
-
+        const gradVals = grad.map((g, idx) => evaluate(g, scope));
         const xNew = x.map((xi, i) => xi - alpha * gradVals[i]);
-        console.log("xNew:", xNew);
-
         const diff = Math.sqrt(xNew.reduce((sum, xi, i) => sum + (xi - x[i]) ** 2, 0));
-        console.log("Step diff:", diff);
+
+        explanations.push(
+            `Step ${i}: We start with x = [${x.join(', ')}]. ` +
+            `Using Gradient Descent, we compute gradients ∇f = [${gradVals.map(v => v.toFixed(4)).join(', ')}], ` +
+            `then update using x_new = x - α * ∇f = [${xNew.map(v => v.toFixed(4)).join(', ')}].`
+        );
 
         if (diff < tol) {
-            console.log("✅ Converged!");
+            explanations.push(`✅ Converged at step ${i} with tolerance ${tol}.`);
             break;
         }
 
@@ -54,8 +46,9 @@ export function gradientDescent(expr, vars, initVals, alpha, maxIter, tol) {
         trajectory.push([...x]);
     }
 
-    return { method: "Gradient Descent", solution: x, trajectory };
+    return { method: "Gradient Descent", solution: x, trajectory, explanations };
 }
+
 export function newtonMethod(expr, vars, initVals, maxIter, tol) {
     let x = [...initVals];
 
@@ -65,58 +58,37 @@ export function newtonMethod(expr, vars, initVals, maxIter, tol) {
     );
 
     const trajectory = [x.slice()];
+    const explanations = [];
 
     for (let i = 0; i < maxIter; i++) {
         const scope = Object.fromEntries(vars.map((v, i) => [v, x[i]]));
-        console.log(`\n🔍 Newton Iteration ${i}`);
-        console.log("Scope:", scope);
 
-        let gradVals, hessVals;
-        try {
-            gradVals = grad.map(g => {
-                const val = math.evaluate(g.toString(), scope);
-                if (typeof val !== 'number' || isNaN(val)) throw new Error(`Invalid grad value: ${val}`);
-                return val;
-            });
-            console.log("Gradient Values:", gradVals);
-
-            hessVals = hessian.map(row =>
-                row.map(h => {
-                    const val = math.evaluate(h.toString(), scope);
-                    if (typeof val !== 'number' || isNaN(val)) throw new Error(`Invalid hessian value: ${val}`);
-                    return val;
-                })
-            );
-            console.log("Hessian Matrix:", hessVals);
-        } catch (e) {
-            console.error("❌ Evaluation error:", e.message);
-            break;
-        }
+        const gradVals = grad.map(g => evaluate(g.toString(), scope));
+        const hessVals = hessian.map(row =>
+            row.map(h => evaluate(h.toString(), scope))
+        );
 
         let delta;
         try {
             const A = math.matrix(hessVals);
             const b = math.matrix(gradVals);
             delta = math.multiply(math.inv(A), b)._data;
-            console.log("Delta:", delta);
         } catch (e) {
-            console.error("❌ Matrix inversion or multiplication failed:", e.message);
+            explanations.push(`⚠️ Matrix inversion failed at step ${i}.`);
             break;
         }
 
-        if (!delta || delta.some(d => typeof d !== 'number' || isNaN(d))) {
-            console.error("❌ Delta contains undefined or NaN values:", delta);
-            break;
-        }
+        const xNew = x.map((xi, j) => xi - delta[j]);
+        const diff = Math.sqrt(xNew.reduce((sum, xi, j) => sum + (xi - x[j]) ** 2, 0));
 
-        const xNew = x.map((xi, i) => xi - delta[i]);
-        console.log("xNew:", xNew);
-
-        const diff = Math.sqrt(xNew.reduce((sum, xi, i) => sum + (xi - x[i]) ** 2, 0));
-        console.log("Step diff:", diff);
+        explanations.push(
+            `Step ${i}: x = [${x.join(', ')}], ∇f = [${gradVals.map(v => v.toFixed(4)).join(', ')}], ` +
+            `Hessian inverse × ∇f = Δ = [${delta.map(d => d.toFixed(4)).join(', ')}], ` +
+            `x_new = x - Δ = [${xNew.map(v => v.toFixed(4)).join(', ')}].`
+        );
 
         if (diff < tol) {
-            console.log("✅ Converged!");
+            explanations.push(`✅ Converged at step ${i} with tolerance ${tol}.`);
             break;
         }
 
@@ -124,12 +96,12 @@ export function newtonMethod(expr, vars, initVals, maxIter, tol) {
         trajectory.push([...x]);
     }
 
-    return { method: "Newton", solution: x, trajectory };
+    return { method: "Newton", solution: x, trajectory, explanations };
 }
+
 export function lagrangianMethod(expr, vars, constraintsExprs, initVals, alpha, maxIter, tol) {
     const lambdas = constraintsExprs.map((_, i) => `l${i}`);
     const allVars = [...vars, ...lambdas];
-
     const lagExpr = constraintsExprs.reduce(
         (acc, g, i) => `(${acc}) + (${lambdas[i]})*(${g})`, expr
     );
@@ -137,44 +109,31 @@ export function lagrangianMethod(expr, vars, constraintsExprs, initVals, alpha, 
     const grad = allVars.map(v => derivative(lagExpr, v));
     let x = [...initVals, ...new Array(lambdas.length).fill(1.0)];
 
-    const trajectory = [x.slice()];
+    const trajectory = [x.slice(0, vars.length)];
+    const explanations = [];
+
     for (let i = 0; i < maxIter; i++) {
         const scope = Object.fromEntries(allVars.map((v, i) => [v, x[i]]));
-        console.log(`\n🧩 Lagrangian Iteration ${i}`);
-        console.log("Scope:", scope);
+        const gradVals = grad.map(g => evaluate(g.toString(), scope));
+        const xNew = x.map((xi, j) => xi - alpha * gradVals[j]);
+        const diff = Math.sqrt(xNew.reduce((sum, xi, j) => sum + (xi - x[j]) ** 2, 0));
 
-        let gradVals;
-        try {
-            gradVals = grad.map((g, idx) => {
-                const val = evaluate(g.toString(), scope);
-                console.log(`∂L/∂${allVars[idx]} = ${g.toString()} =`, val);
-                return val;
-            });
-        } catch (e) {
-            console.error("❌ Gradient evaluation failed:", e.message);
-            break;
-        }
-
-        const xNew = x.map((xi, i) => xi - alpha * gradVals[i]);
-        console.log("xNew:", xNew);
-
-        const diff = Math.sqrt(xNew.reduce((sum, xi, i) => sum + (xi - x[i]) ** 2, 0));
-        console.log("Step diff:", diff);
+        explanations.push(
+            `Step ${i}: x = [${x.slice(0, vars.length).join(', ')}], λ = [${x.slice(vars.length).join(', ')}], ` +
+            `∇L = [${gradVals.map(v => v.toFixed(4)).join(', ')}], ` +
+            `x_new = x - α * ∇L = [${xNew.map(v => v.toFixed(4)).join(', ')}].`
+        );
 
         if (diff < tol) {
-            console.log("✅ Converged!");
+            explanations.push(`✅ Converged at step ${i} with tolerance ${tol}.`);
             break;
         }
 
         x = xNew;
-        trajectory.push([...x]);
+        trajectory.push(x.slice(0, vars.length));
     }
 
-    return {
-        method: "Lagrangian",
-        solution: x.slice(0, vars.length),
-        trajectory: trajectory.map(t => t.slice(0, vars.length)),
-    };
+    return { method: "Lagrangian", solution: x.slice(0, vars.length), trajectory, explanations };
 }
 
 export function determineBestMethod(expr, vars, constraints) {
@@ -185,7 +144,6 @@ export function determineBestMethod(expr, vars, constraints) {
 
 export function solveExpression(expr, vars, initVals, constraints, alpha, maxIter, tol, method) {
     if (method === "auto") method = determineBestMethod(expr, vars, constraints);
-    console.log("METHOD",method)
     if (method === "gradient") return gradientDescent(expr, vars, initVals, alpha, maxIter, tol);
     if (method === "newton") return newtonMethod(expr, vars, initVals, maxIter, tol);
     if (method === "lagrangian") return lagrangianMethod(expr, vars, constraints, initVals, alpha, maxIter, tol);
