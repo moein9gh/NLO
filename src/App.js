@@ -103,6 +103,9 @@ function App() {
 
     return (
         <div className="App" style={{padding: '2rem', fontFamily: 'sans-serif', backgroundColor: '#EAEFEF'}}>
+
+
+
             <div style={{
                 maxWidth: '850px',
                 margin: '0 auto',
@@ -111,10 +114,35 @@ function App() {
                 borderRadius: '12px',
                 boxShadow: '0 2px 12px rgba(0,0,0,0.1)'
             }}>
+
                 <div style={{ textAlign: 'center', marginBottom: '1.5rem' }}>
                     <img src="/img.png" alt="App Logo" style={{ height: '160px' }} />
                 </div>
                 <h2 style={{textAlign: 'center', color: '#333446'}}>🧮 Math Optimizer</h2>
+
+                <div style={{
+                    marginTop: '3rem',
+                    padding: '1.5rem',
+                    background: '#f0f4f8',
+                    borderRadius: '12px',
+                    color: '#333446',
+                    direction: 'rtl',
+                    lineHeight: '1.8',
+                    textAlign: 'right'
+                }}>
+                    <h4 style={{ marginBottom: '1rem', color: '#333446', textAlign: 'center' }}>📘 اطلاعات پروژه</h4>
+                    <p style={{ fontWeight: 'bold', textAlign: 'center' }}>
+                        پروژه درس بهینه‌سازی غیر خطی، ترم بهار ۱۴۰۴<br />
+                        دانشگاه علم و صنعت ایران - دانشکده ریاضی
+                    </p>
+                    <p>
+                        <strong>استاد درس:</strong> دکتر فاطمه الهی<br />
+                        <strong>مستندسازان:</strong> الهه رزم‌خواه، سروناز خرم، سروش اسماعیلی<br />
+                        <strong>برنامه‌نویس:</strong> معین قاسمی<br />
+                        <strong>طراحی الگوریتم:</strong> هادی احدی‌فر<br />
+                        <strong>مدیر پروژه و هماهنگ‌کننده:</strong> احسان کریمی
+                    </p>
+                </div>
 
                 <div style={{marginBottom: '1rem'}}>
                     <label>Select Sample:</label>
